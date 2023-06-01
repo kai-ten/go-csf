@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -32,28 +31,52 @@ type OktaRecord struct {
 	Request               *okta.LogRequest               `json:"request"`
 }
 
-type Activity struct {
-	Activity   string
-	ActivityID *uint8
+type Classification struct {
+	Object   string
+	ObjectID uint8
 }
 
-func GetActivityDetails(eventType string) *Activity {
-	if strings.Contains(eventType, "user.authentication") {
-		return &Activity{
-			Activity:   "Logon",
-			ActivityID: gcs.UInteger8(1),
+func GetActivityDetails(eventType *string) Classification {
+	activity := Classification{
+		Object:   "Unknown",
+		ObjectID: 0,
+	}
+
+	if strings.Contains(*eventType, "user.authentication") {
+		return Classification{
+			Object:   "Logon",
+			ObjectID: 1,
 		}
 	}
-	return nil
+	return activity
+}
+
+func GetAuthProtocol(authProvider *string) Classification {
+	authProtocol := Classification{
+		Object:   "unknown",
+		ObjectID: 0,
+	}
+
+	if strings.Contains(*authProvider, "FACTOR") {
+		return Classification{
+			Object:   "other/mfa",
+			ObjectID: 99,
+		}
+	}
+
+	return authProtocol
 }
 
 func TransformRecordOkta(oktaRecord *OktaRecord) {
-	var authentication *gcs.Authentication
+	var authentication gcs.Authentication
 
-	activity := GetActivityDetails(oktaRecord.EventType)
-	authentication.Activity = activity.Activity
-	authentication.ActivityID = *activity.ActivityID
+	activity := GetActivityDetails(&oktaRecord.EventType)
+	authentication.Activity = activity.Object
+	authentication.ActivityID = activity.ObjectID
 
+	authProtocol := GetAuthProtocol(&oktaRecord.AuthenticationContext.AuthenticationProvider)
+	authentication.AuthProtocol = authProtocol.Object
+	authentication.AuthProtocolID = authProtocol.ObjectID
 }
 
 func ReadFileOkta(file_key string) error {
@@ -78,7 +101,7 @@ func ReadFileOkta(file_key string) error {
 			log.Errorf("Could not unmarshal JSON log: %v", err)
 			return err
 		}
-		fmt.Printf("%v", record)
+		TransformRecordOkta(&record)
 	}
 
 	return nil
