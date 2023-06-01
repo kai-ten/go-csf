@@ -49,3 +49,15 @@ func TestGetAuthProtocolCatchAll(t *testing.T) {
 		t.Fatalf("AuthProtocolID did not match expected result: 0")
 	}
 }
+
+func BenchmarkFileRead(b *testing.B) {
+	b.ReportAllocs()
+
+	file_key := "./assets/okta-syslog.log"
+
+	for n := 0; n < b.N; n++ {
+		if err := ReadFileOkta(file_key); err != nil {
+			b.Errorf("Failed to read file: %v", err)
+		}
+	}
+}
