@@ -53,13 +53,13 @@ func GetActivityDetails(eventType *string) Classification {
 
 func GetAuthProtocol(authProvider *string) Classification {
 	authProtocol := Classification{
-		Object:   "unknown",
+		Object:   "Unknown",
 		ObjectID: 0,
 	}
 
 	if strings.Contains(*authProvider, "FACTOR") {
 		return Classification{
-			Object:   "other/mfa",
+			Object:   "Other/mfa",
 			ObjectID: 99,
 		}
 	}
